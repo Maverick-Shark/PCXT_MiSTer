@@ -206,6 +206,7 @@ module hgc(
 	 );
 	 
 //    if (HGC_70HZ) begin
+        defparam crtc.LOCK = 1;
         defparam crtc.H_TOTAL = 8'd99;
         defparam crtc.H_DISP = 8'd80;
         defparam crtc.H_SYNCPOS = 8'd82;
