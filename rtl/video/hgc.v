@@ -211,10 +211,10 @@ module hgc(
         defparam crtc.H_DISP = 8'd80;
         defparam crtc.H_SYNCPOS = 8'd82;
         defparam crtc.H_SYNCWIDTH = 4'd15;
-        defparam crtc.V_TOTAL = 7'd31;
-        defparam crtc.V_TOTALADJ = 5'd1;
+        defparam crtc.V_TOTAL = 7'd36;     // 37 rows × 14 lines + 7 adj = 525 total
+        defparam crtc.V_TOTALADJ = 5'd7;
         defparam crtc.V_DISP = 7'd25;
-        defparam crtc.V_SYNCPOS = 7'd27;
+        defparam crtc.V_SYNCPOS = 7'd28;
         defparam crtc.V_MAXSCAN = 5'd13;
         defparam crtc.C_START = 7'd11;
         defparam crtc.C_END = 5'd12;
