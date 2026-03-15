@@ -155,6 +155,10 @@ module PERIPHERALS #(
         input   logic           terminal_count,
         // XTCTL DATA
         output  logic   [7:0]   xtctl = 8'h00,
+        input   logic           use_fe2010a,
+        // FE2010A DATA
+        output  logic   [1:0]   fe2010_clk_select,
+        output  logic           fe2010_fast_wait,
         // Others
         output  logic           pause_core,
         input   logic           cga_hw,
@@ -247,6 +251,9 @@ module PERIPHERALS #(
     wire    tandy_page_chip_select  = `ENABLE_TANDY_VIDEO ? (tandy_video_en && iorq && ~address_enable_n && address[15:0] == 16'h03DF) : 1'b0;
     wire    xtctl_chip_select       = (iorq && ~address_enable_n && address[15:0] == 16'h8888);
     wire    rtc_chip_select         = (iorq && ~address_enable_n && address[15:1] == (16'h02C0 >> 1)); // 0x2C0 .. 0x2C1
+
+    logic   [7:0]   fe2010_data_bus_out;
+    logic           fe2010_data_bus_out_from_chipset;
 
     wire    [3:0] ems_page_address  = (ems_address == 2'b00) ? 4'b1100 : (ems_address == 2'b01) ? 4'b1101 : 4'b1110;
     wire    ems_chip_select         = `ENABLE_EMS ? (iorq && ~address_enable_n && ems_enabled && ({address[15:2], 2'd0} == 16'h0260)) : 1'b0;          // 260h..263h
@@ -1739,6 +1746,23 @@ end
     );
 
 
+    FE2010A u_FE2010A
+    (
+        .clock                      (clock),
+        .reset                      (reset),
+        .address                    (address),
+        .data_bus_in                (internal_data_bus),
+        .io_read_n                  (io_read_n),
+        .io_write_n                 (io_write_n),
+        .address_enable_n           (address_enable_n),
+        .enable                     (use_fe2010a),
+        .data_bus_out               (fe2010_data_bus_out),
+        .data_bus_out_from_chipset  (fe2010_data_bus_out_from_chipset),
+        .clk_select                 (fe2010_clk_select),
+        .fast_wait                  (fe2010_fast_wait)
+    );
+
+
     //
     // data_bus_out
     //
@@ -1849,6 +1873,11 @@ end
         begin
             data_bus_out_from_chipset <= 1'b1;
             data_bus_out <= rtc_readdata;
+        end
+        else if (fe2010_data_bus_out_from_chipset)
+        begin
+            data_bus_out_from_chipset <= 1'b1;
+            data_bus_out <= fe2010_data_bus_out;
         end
         else
         begin

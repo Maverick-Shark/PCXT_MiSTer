@@ -157,6 +157,10 @@ module CHIPSET #(
         output  logic   [2:0]   ide0_request,
         // XTCTL DATA
         output  logic   [7:0]   xtctl,
+        input   logic           use_fe2010a,
+        // FE2010A DATA
+        output  logic   [1:0]   fe2010_clk_select,
+        output  logic           fe2010_fast_wait,
         // Optional flags
         input   logic           enable_a000h,
         // RAM wait mode
@@ -396,6 +400,9 @@ module CHIPSET #(
         .fdd_dma_ack                        (~dma_acknowledge_n[2]),
         .terminal_count                     (terminal_count_n),
         .xtctl                              (xtctl),
+        .use_fe2010a                        (use_fe2010a),
+        .fe2010_clk_select                   (fe2010_clk_select),
+        .fe2010_fast_wait                    (fe2010_fast_wait),
         .pause_core                         (pause_core),
         .cga_hw                             (cga_hw),
         .cga_scandouble_en                  (cga_scandouble_en),
