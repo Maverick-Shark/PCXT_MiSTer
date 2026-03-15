@@ -306,6 +306,8 @@ module emu
 		"P3OPQ,Joystick 2, Analog, Digital, Disabled;",
 		"P3OR,Sync Joy to CPU Speed,No,Yes;",
 		"P3OS,Swap Joysticks,No,Yes;",
+		"P3OT,Chipset,PCXT,Faraday FE2010A;",
+		"P3OUV,Floppy Drives,1 Drive,2 Drives,None;",
 		"P3-;",	
 		"-;",
 		"R0,Reset & apply settings;",
@@ -317,6 +319,8 @@ module emu
     wire [1:0] buttons;
     wire [63:0] status;
     wire [7:0]  xtctl;
+    wire [1:0]  fe2010_clk_select;
+    wire        fe2010_fast_wait;
 
     //Keyboard Ps2
     wire        ps2_kbd_clk_out;
@@ -351,6 +355,8 @@ module emu
     wire a000h = `ENABLE_A000_UMB ? (~status[41] & ~xtctl[6]) : 1'b0;
     wire [2:0] vsync_width_osd = status[56:54];  // 0=Auto (use register), 1-7=override
     wire [2:0] hsync_width_osd = status[59:57];  // 0=Auto, 1-7=fixed width (Nx16 pixel clocks)
+    wire       use_fe2010a = status[61];
+    wire [1:0] floppy_cfg = status[63:62];
 
     reg [1:0]   scale_video_ff;
     reg         hgc_mode_video_ff;
@@ -509,10 +515,13 @@ module emu
     logic        shift_read_timing;
     logic  [1:0] ram_read_wait_cycle;
     logic  [1:0] ram_write_wait_cycle;
+    logic  [1:0] ram_read_wait_cycle_gen;
+    logic  [1:0] ram_write_wait_cycle_gen;
     logic        cycle_accrate;
     logic  [1:0] clk_select;
-    wire   [1:0] clk_select_next = ((xtctl[3:2] == 2'b00) && ~xtctl[7]) ? status[18:17] :
-                                   (xtctl[7] ? 2'b11 : xtctl[3:2] - 2'b01);
+    wire   [1:0] clk_select_next_pcxt = ((xtctl[3:2] == 2'b00) && ~xtctl[7]) ? status[18:17] :
+                                        (xtctl[7] ? 2'b11 : xtctl[3:2] - 2'b01);
+    wire   [1:0] clk_select_next = use_fe2010a ? fe2010_clk_select : clk_select_next_pcxt;
 
     always @(posedge clk_chipset, posedge reset)
     begin
@@ -536,9 +545,12 @@ module emu
         .clock_cycle_counter_division_ratio (clock_cycle_counter_division_ratio),
         .clock_cycle_counter_decrement_value(clock_cycle_counter_decrement_value),
         .shift_read_timing                  (shift_read_timing),
-        .ram_read_wait_cycle                (ram_read_wait_cycle),
-        .ram_write_wait_cycle               (ram_write_wait_cycle)
+        .ram_read_wait_cycle                (ram_read_wait_cycle_gen),
+        .ram_write_wait_cycle               (ram_write_wait_cycle_gen)
     );
+
+    assign ram_read_wait_cycle = (use_fe2010a && fe2010_fast_wait) ? 2'd0 : ram_read_wait_cycle_gen;
+    assign ram_write_wait_cycle = (use_fe2010a && fe2010_fast_wait) ? 2'd0 : ram_write_wait_cycle_gen;
     //////////////////////////////////////////////////////////////////
 
     logic reset = 1'b1;
@@ -1000,7 +1012,7 @@ module emu
     wire    [1:0]   sw_floppy;
 
     assign  sw_base = `ENABLE_HGC ? (hgc_mode ? 6'b111101 : 6'b101101) : 6'b101101;
-    assign  sw_floppy = fdd_present[1] ? 2'b01 : 2'b00;
+    assign  sw_floppy = (floppy_cfg == 2'b01) ? 2'b01 : 2'b00;
     assign  sw = {sw_floppy, sw_base}; // DIP switches (CGA and floppy count)
     assign  port_c_in[3:0] = port_b_out[3] ? sw[7:4] : sw[3:0];
 
@@ -1152,6 +1164,9 @@ module emu
 		.fdd_request                        (mgmt_req[7:6]),
 		.ide0_request                       (mgmt_req[2:0]),
 		.xtctl                              (xtctl),
+		.use_fe2010a                        (use_fe2010a),
+		.fe2010_clk_select                   (fe2010_clk_select),
+		.fe2010_fast_wait                    (fe2010_fast_wait),
 		.enable_a000h                       (a000h),
 		.wait_count_clk_en                  (cpu_ce_negedge),
 		.ram_read_wait_cycle                (ram_read_wait_cycle),
